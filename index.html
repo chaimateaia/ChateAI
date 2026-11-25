@@ -178,11 +178,8 @@
     <div class="header"><h1>Настройки</h1></div>
     <div class="settings-page">
       <div class="settings-card">
-        <h2>Supabase</h2>
-        <div class="form-group"><label>Project URL</label><input id="sbUrl" placeholder="https://xxxx.supabase.co" onchange="saveSbConfig()" /></div>
-        <div class="form-group"><label>Anon Key</label><input id="sbKey" type="password" placeholder="eyJ..." onchange="saveSbConfig()" /></div>
-        <button class="btn btn-ghost" style="width:100%" onclick="initSupabase(true)">Подключить</button>
-        <div id="sbStatus" style="margin-top:8px;font-size:0.85rem;color:var(--muted)"></div>
+        <h2>Сервер</h2>
+        <div id="sbStatus" style="font-size:0.9rem;color:var(--muted)">Подключение...</div>
       </div>
       <div class="settings-card">
         <h2>ИИ (API)</h2>
@@ -270,12 +267,7 @@ function loadLocal() {
     const a = localStorage.getItem('ai_api');
     if (a) api = { ...api, ...JSON.parse(a) };
   } catch {}
-  try {
-    const u = localStorage.getItem('sb_url');
-    const k = localStorage.getItem('sb_key');
-    if (u) document.getElementById('sbUrl').value = u;
-    if (k) document.getElementById('sbKey').value = k;
-  } catch {}
+
 }
 
 function saveApiSettings() {
@@ -287,21 +279,13 @@ function saveApiSettings() {
   localStorage.setItem('ai_api', JSON.stringify(api));
 }
 
-function saveSbConfig() {
-  localStorage.setItem('sb_url', document.getElementById('sbUrl').value.trim());
-  localStorage.setItem('sb_key', document.getElementById('sbKey').value.trim());
-}
+
 
 async function initSupabase(manual = false) {
-  const url = document.getElementById('sbUrl').value.trim() || localStorage.getItem('sb_url');
-  const key = document.getElementById('sbKey').value.trim() || localStorage.getItem('sb_key');
+  // Один общий сервер для всех
+  const url = 'https://qlfooufaqnfxaprpozty.supabase.co';
+  const key = 'sb_publishable_R1dFHVL-3uT2aDsOSnapyw_05vn6Dqp';
   const status = document.getElementById('sbStatus');
-
-  if (!url || !key) {
-    status.textContent = 'Укажи URL и Anon Key';
-    status.style.color = 'var(--rose)';
-    return false;
-  }
 
   try {
     sb = window.supabase.createClient(url, key);
