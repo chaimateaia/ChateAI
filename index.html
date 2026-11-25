@@ -256,7 +256,7 @@ let api = {
   provider: 'groq',
   apiKey: '',
   baseUrl: 'https://api.groq.com/openai/v1',
-  model: 'llama-3.3-70b-versatile',
+  model: 'openai/gpt-oss-20b',
   temperature: 0.85,
   maxTokens: 1024
 };
@@ -706,7 +706,7 @@ function setProvider(p) {
   api.provider = p;
   document.querySelectorAll('.provider-btns button').forEach(b => b.classList.remove('active'));
   document.getElementById('prov-' + p)?.classList.add('active');
-  if (p === 'groq') { api.baseUrl = 'https://api.groq.com/openai/v1'; api.model = 'llama-3.3-70b-versatile'; }
+  if (p === 'groq') { api.baseUrl = 'https://api.groq.com/openai/v1'; api.model = 'openai/gpt-oss-20b'; }
   else if (p === 'openrouter') { api.baseUrl = 'https://openrouter.ai/api/v1'; api.model = 'meta-llama/llama-3.3-70b-instruct'; }
   fillApiForm();
   saveApiSettings();
