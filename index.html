@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a0a2e" />
+  <title>AI Character Chat</title>
+  <style>
+    :root {
+      --bg: #12081f;
+      --bg2: #1a0a2e;
+      --bg3: #2a1545;
+      --purple: #a855f7;
+      --purple2: #c084fc;
+      --accent: #e879f9;
+      --text: #f3e8ff;
+      --muted: #a78bfa99;
+      --rose: #fb7185;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      overflow: hidden;
+    }
+    #app { height: 100%; display: flex; flex-direction: column; }
+
+    /* Header */
+    .header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; background: var(--bg2);
+      border-bottom: 1px solid #3b1f5e;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-size: 1.15rem; font-weight: 700;
+      background: linear-gradient(90deg, #c084fc, #e879f9);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .header .spacer { flex: 1; }
+    .btn {
+      border: none; border-radius: 10px; padding: 8px 14px;
+      font-size: 0.9rem; cursor: pointer; font-weight: 500;
+      transition: 0.15s;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #9333ea, #a855f7);
+      color: white;
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-ghost {
+      background: var(--bg3); color: var(--purple2);
+    }
+    .btn-ghost:hover { background: #3b1f5e; }
+    .btn-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: var(--purple2);
+      cursor: pointer; font-size: 1.2rem;
+    }
+    .btn-icon:hover { background: var(--bg3); }
+
+    /* Screens */
+    .screen { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* Home */
+    .search-bar {
+      padding: 12px 16px;
+    }
+    .search-bar input {
+      width: 100%; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid #3b1f5e; background: var(--bg2);
+      color: var(--text); font-size: 1rem; outline: none;
+    }
+    .search-bar input:focus { border-color: var(--purple); }
+    .categories {
+      display: flex; gap: 8px; padding: 0 16px 12px;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .categories::-webkit-scrollbar { display: none; }
+    .cat {
+      flex-shrink: 0; padding: 6px 12px; border-radius: 20px;
+      background: var(--bg3); color: var(--purple2); font-size: 0.85rem;
+      border: none; cursor: pointer;
+    }
+    .cat.active { background: var(--purple); color: white; }
+
+    .chars-grid {
+      flex: 1; overflow-y: auto; padding: 8px 16px 80px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .char-card {
+      background: var(--bg2); border: 1px solid #3b1f5e;
+      border-radius: 16px; overflow: hidden; cursor: pointer;
+      transition: 0.15s;
+    }
+    .char-card:hover { border-color: #7e22ce; transform: translateY(-2px); }
+    .char-avatar {
+      aspect-ratio: 1; background: linear-gradient(135deg, #4c1d95, #1a0a2e);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; position: relative;
+    }
+    .char-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .nsfw-badge {
+      position: absolute; top: 6px; left: 6px;
+      background: #e11d48; color: white; font-size: 0.65rem;
+      font-weight: 700; padding: 2px 6px; border-radius: 6px;
+    }
+    .char-info { padding: 10px; }
+    .char-name { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .char-desc { font-size: 0.78rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+    /* Character page */
+    .char-page { overflow-y: auto; padding: 16px; padding-bottom: 100px; }
+    .char-page-header { display: flex; gap: 16px; margin-bottom: 20px; }
+    .char-page-avatar {
+      width: 110px; height: 110px; border-radius: 20px;
+      background: linear-gradient(135deg, #4c1d95, #1a0a2e);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem; flex-shrink: 0; overflow: hidden;
+    }
+    .char-page-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .section { margin-bottom: 16px; background: var(--bg2); border-radius: 14px; padding: 14px; border: 1px solid #3b1f5e; }
+    .section h3 { font-size: 0.8rem; color: var(--purple2); margin-bottom: 6px; }
+    .section p { font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; }
+
+    /* Chat */
+    .chat-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; background: var(--bg2);
+      border-bottom: 1px solid #3b1f5e; flex-shrink: 0;
+    }
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 16px 12px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .msg {
+      max-width: 85%; padding: 10px 14px; border-radius: 16px;
+      font-size: 0.95rem; line-height: 1.45; white-space: pre-wrap;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
+    .msg.user {
+      align-self: flex-end; background: #7e22ce; color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.assistant {
+      align-self: flex-start; background: var(--bg3);
+      border: 1px solid #3b1f5e; border-bottom-left-radius: 4px;
+    }
+    .msg-error { align-self: center; background: #4c0519; color: #fda4af; font-size: 0.85rem; max-width: 95%; }
+    .typing {
+      align-self: flex-start; display: flex; gap: 4px; padding: 12px 16px;
+      background: var(--bg3); border-radius: 16px; border: 1px solid #3b1f5e;
+    }
+    .typing span {
+      width: 7px; height: 7px; background: var(--purple2); border-radius: 50%;
+      animation: bounce 1.3s infinite ease-in-out;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.15s; }
+    .typing span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    .chat-input-bar {
+      display: flex; gap: 8px; padding: 10px 12px;
+      background: var(--bg2); border-top: 1px solid #3b1f5e;
+      flex-shrink: 0; align-items: flex-end;
+    }
+    .chat-input-bar textarea {
+      flex: 1; resize: none; border-radius: 14px; padding: 10px 14px;
+      border: 1px solid #3b1f5e; background: var(--bg3);
+      color: var(--text); font-size: 1rem; outline: none;
+      max-height: 120px; min-height: 44px; font-family: inherit;
+    }
+    .chat-input-bar textarea:focus { border-color: var(--purple); }
+    .send-btn {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: var(--purple); border: none; color: white;
+      font-size: 1.2rem; cursor: pointer; flex-shrink: 0;
+    }
+    .send-btn:disabled { opacity: 0.4; }
+
+    /* Create form */
+    .form-page { overflow-y: auto; padding: 16px; padding-bottom: 100px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.85rem; color: var(--purple2); margin-bottom: 5px; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid #3b1f5e; background: var(--bg2);
+      color: var(--text); font-size: 0.95rem; outline: none;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--purple); }
+    .form-group textarea { min-height: 70px; resize: vertical; }
+    .check-row { display: flex; gap: 16px; margin: 12px 0; }
+    .check-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem; }
+
+    /* Settings */
+    .settings-page { overflow-y: auto; padding: 16px; padding-bottom: 80px; }
+    .settings-card {
+      background: var(--bg2); border: 1px solid #3b1f5e;
+      border-radius: 16px; padding: 16px; margin-bottom: 16px;
+    }
+    .settings-card h2 { font-size: 1.05rem; margin-bottom: 12px; }
+    .provider-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .provider-btns button {
+      padding: 7px 12px; border-radius: 8px; border: none;
+      background: var(--bg3); color: var(--purple2); cursor: pointer;
+    }
+    .provider-btns button.active { background: var(--purple); color: white; }
+    .range-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+    input[type=range] { width: 100%; accent-color: var(--purple); }
+
+    /* Bottom nav */
+    .bottom-nav {
+      display: flex; justify-content: space-around; align-items: center;
+      background: var(--bg2); border-top: 1px solid #3b1f5e;
+      padding: 6px 0 env(safe-area-inset-bottom, 6px);
+      flex-shrink: 0;
+    }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 2px; background: none; border: none; color: var(--muted);
+      font-size: 0.7rem; cursor: pointer; padding: 6px 10px;
+    }
+    .nav-item.active { color: var(--accent); }
+    .nav-item span.icon { font-size: 1.35rem; }
+
+    .empty { text-align: center; color: var(--muted); padding: 40px 20px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ========== HOME ========== -->
+  <div id="screen-home" class="screen active">
+    <div class="header">
+      <h1>AI Character Chat</h1>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" onclick="showScreen('create')">+ Создать</button>
+    </div>
+    <div class="search-bar">
+      <input id="searchInput" type="text" placeholder="Поиск персонажей..." oninput="renderCharacters()" />
+    </div>
+    <div class="categories" id="categories"></div>
+    <div class="chars-grid" id="charsGrid"></div>
+  </div>
+
+  <!-- ========== CHARACTER ========== -->
+  <div id="screen-character" class="screen">
+    <div class="header">
+      <button class="btn-icon" onclick="showScreen('home')">←</button>
+      <h1 id="charPageTitle">Персонаж</h1>
+    </div>
+    <div class="char-page" id="charPageContent"></div>
+  </div>
+
+  <!-- ========== CHAT ========== -->
+  <div id="screen-chat" class="screen">
+    <div class="chat-header">
+      <button class="btn-icon" onclick="showScreen('character')">←</button>
+      <div id="chatAvatar" class="char-page-avatar" style="width:40px;height:40px;font-size:1.2rem;border-radius:50%"></div>
+      <div style="flex:1;min-width:0">
+        <div id="chatName" style="font-weight:600;font-size:0.95rem"></div>
+      </div>
+      <button class="btn-icon" onclick="clearCurrentChat()" title="Новый чат">🗑</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-bar">
+      <textarea id="chatInput" rows="1" placeholder="Напиши сообщение..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+
+  <!-- ========== CREATE ========== -->
+  <div id="screen-create" class="screen">
+    <div class="header">
+      <button class="btn-icon" onclick="showScreen('home')">←</button>
+      <h1 id="createTitle">Новый персонаж</h1>
+    </div>
+    <div class="form-page">
+      <div class="form-group"><label>Имя *</label><input id="fName" placeholder="Имя персонажа" /></div>
+      <div class="form-group"><label>Краткое описание</label><textarea id="fDesc" placeholder="Кто это?"></textarea></div>
+      <div class="form-group"><label>Характер / личность</label><textarea id="fPersonality" placeholder="Как он себя ведёт, характер..."></textarea></div>
+      <div class="form-group"><label>Предыстория</label><textarea id="fBackstory"></textarea></div>
+      <div class="form-group"><label>Сценарий / сеттинг</label><textarea id="fScenario"></textarea></div>
+      <div class="form-group"><label>Приветственное сообщение</label><textarea id="fGreeting" placeholder="Первое сообщение персонажа"></textarea></div>
+      <div class="form-group"><label>Стиль речи</label><textarea id="fSpeech" placeholder="Как говорит..."></textarea></div>
+      <div class="form-group"><label>URL аватара (необязательно)</label><input id="fAvatar" placeholder="https://..." /></div>
+      <div class="form-group">
+        <label>Категория</label>
+        <select id="fCategory">
+          <option value="">Без категории</option>
+          <option value="romance">❤️ Романтика</option>
+          <option value="fantasy">🧙 Фэнтези</option>
+          <option value="scifi">🚀 Sci-Fi</option>
+          <option value="anime">🌸 Аниме</option>
+          <option value="horror">👻 Хоррор</option>
+          <option value="nsfw">🔥 NSFW</option>
+          <option value="original">✨ Оригинальные</option>
+        </select>
+      </div>
+      <div class="check-row">
+        <label><input type="checkbox" id="fNsfw" /> NSFW / 18+</label>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;margin-top:8px" onclick="saveCharacter()">Сохранить персонажа</button>
+      <button class="btn btn-ghost" style="width:100%;padding:12px;margin-top:8px" onclick="exportCharacter()">Экспорт JSON</button>
+    </div>
+  </div>
+
+  <!-- ========== SETTINGS ========== -->
+  <div id="screen-settings" class="screen">
+    <div class="header">
+      <h1>Настройки API</h1>
+    </div>
+    <div class="settings-page">
+      <div class="settings-card">
+        <h2>Провайдер</h2>
+        <div class="provider-btns">
+          <button id="prov-groq" class="active" onclick="setProvider('groq')">Groq</button>
+          <button id="prov-openrouter" onclick="setProvider('openrouter')">OpenRouter</button>
+          <button id="prov-custom" onclick="setProvider('custom')">Custom</button>
+        </div>
+
+        <div class="form-group">
+          <label>API Key (хранится только у тебя в браузере)</label>
+          <input id="apiKey" type="password" placeholder="gsk_... или sk-or-..." onchange="saveSettings()" />
+        </div>
+        <div class="form-group">
+          <label>Base URL</label>
+          <input id="baseUrl" onchange="saveSettings()" />
+        </div>
+        <div class="form-group">
+          <label>Модель</label>
+          <input id="model" onchange="saveSettings()" />
+        </div>
+        <div class="form-group">
+          <div class="range-row"><span>Temperature</span><span id="tempVal">0.85</span></div>
+          <input type="range" id="temperature" min="0" max="1.5" step="0.05" value="0.85"
+            oninput="document.getElementById('tempVal').textContent=this.value;saveSettings()" />
+        </div>
+        <div class="form-group">
+          <div class="range-row"><span>Max tokens</span><span id="tokensVal">1024</span></div>
+          <input type="range" id="maxTokens" min="256" max="4096" step="128" value="1024"
+            oninput="document.getElementById('tokensVal').textContent=this.value;saveSettings()" />
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="testConnection()">Проверить подключение</button>
+        <div id="testResult" style="margin-top:10px;font-size:0.9rem"></div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);line-height:1.5">
+        • Groq — бесплатно и быстро: <b>console.groq.com</b><br>
+        • OpenRouter — много моделей: <b>openrouter.ai</b><br>
+        • Ключ никогда не уходит на чужие серверы, только в твоём браузере.
+      </p>
+    </div>
+  </div>
+
+  <!-- Bottom navigation -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-item active" data-screen="home" onclick="showScreen('home')">
+      <span class="icon">🏠</span>Главная
+    </button>
+    <button class="nav-item" data-screen="create" onclick="showScreen('create')">
+      <span class="icon">➕</span>Создать
+    </button>
+    <button class="nav-item" data-screen="settings" onclick="showScreen('settings')">
+      <span class="icon">⚙️</span>API
+    </button>
+  </nav>
+</div>
+
+<script>
+// ===================== DATA =====================
+const DEFAULT_CHARS = [
+  {
+    id: 'demo1',
+    name: 'Алиса',
+    description: 'Добрая и немного застенчивая девушка, которая любит книги и чай.',
+    personality: 'Мягкая, заботливая, немного стеснительная. Говорит вежливо и тепло.',
+    backstory: 'Студентка литературы. Живёт в небольшом городе.',
+    scenario: 'Вы встретились в библиотеке.',
+    greeting: 'Ой... привет. Ты тоже здесь за книгами? Я Алиса.',
+    speech_style: 'Мягкий, немного неуверенный тон, часто использует "...".',
+    avatar: '',
+    category: 'romance',
+    nsfw: false
+  },
+  {
+    id: 'demo2',
+    name: 'Рейвен',
+    description: 'Загадочный маг из тёмного фэнтези. Холодный, но с глубокими чувствами.',
+    personality: 'Саркастичный, умный, сдержанный. Не любит пустых разговоров.',
+    backstory: 'Бывший член тёмного ордена. Теперь странствует в одиночку.',
+    scenario: 'Ночь. Лес. Он сидит у костра.',
+    greeting: '*смотрит на тебя исподлобья* ...Ты потерялся, смертный?',
+    speech_style: 'Короткие фразы, иногда с лёгким презрением, но не злой.',
+    avatar: '',
+    category: 'fantasy',
+    nsfw: false
+  },
+  {
+    id: 'demo3',
+    name: 'Лилит',
+    description: 'Соблазнительная демоница. Игривая, опасная и очень открытая.',
+    personality: 'Кокетливая, доминирующая, чувственная. Любит дразнить.',
+    backstory: 'Демон желания, который пришёл в мир людей от скуки.',
+    scenario: 'Ты призвал её случайно.',
+    greeting: '*появляется в клубах дыма, улыбаясь* Ну здравствуй, вызыватель... Что желаешь?',
+    speech_style: 'Игривый, чувственный, с намёками. Может быть очень откровенной.',
+    avatar: '',
+    category: 'nsfw',
+    nsfw: true
+  }
+];
+
+let characters = [];
+let currentChar = null;
+let currentChat = []; // {role, content}
+let settings = {
+  provider: 'groq',
+  apiKey: '',
+  baseUrl: 'https://api.groq.com/openai/v1',
+  model: 'llama-3.3-70b-versatile',
+  temperature: 0.85,
+  maxTokens: 1024
+};
+let editingId = null;
+let currentCategory = '';
+
+// ===================== STORAGE =====================
+function load() {
+  try {
+    const saved = localStorage.getItem('ai_chars');
+    characters = saved ? JSON.parse(saved) : [...DEFAULT_CHARS];
+  } catch { characters = [...DEFAULT_CHARS]; }
+
+  try {
+    const s = localStorage.getItem('ai_settings');
+    if (s) settings = { ...settings, ...JSON.parse(s) };
+  } catch {}
+}
+
+function saveChars() {
+  localStorage.setItem('ai_chars', JSON.stringify(characters));
+}
+
+function saveSettings() {
+  settings.apiKey = document.getElementById('apiKey').value;
+  settings.baseUrl = document.getElementById('baseUrl').value;
+  settings.model = document.getElementById('model').value;
+  settings.temperature = parseFloat(document.getElementById('temperature').value);
+  settings.maxTokens = parseInt(document.getElementById('maxTokens').value);
+  localStorage.setItem('ai_settings', JSON.stringify(settings));
+}
+
+// ===================== UI =====================
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.screen === name);
+  });
+
+  // hide bottom nav on chat
+  document.getElementById('bottomNav').style.display = name === 'chat' ? 'none' : 'flex';
+
+  if (name === 'home') renderCharacters();
+  if (name === 'settings') fillSettingsForm();
+  if (name === 'create' && !editingId) {
+    document.getElementById('createTitle').textContent = 'Новый персонаж';
+    clearForm();
+  }
+}
+
+function renderCategories() {
+  const cats = [
+    { id: '', name: 'Все' },
+    { id: 'romance', name: '❤️ Романтика' },
+    { id: 'fantasy', name: '🧙 Фэнтези' },
+    { id: 'scifi', name: '🚀 Sci-Fi' },
+    { id: 'anime', name: '🌸 Аниме' },
+    { id: 'horror', name: '👻 Хоррор' },
+    { id: 'nsfw', name: '🔥 NSFW' },
+    { id: 'original', name: '✨ Оригинал' }
+  ];
+  const el = document.getElementById('categories');
+  el.innerHTML = cats.map(c =>
+    `<button class="cat ${currentCategory === c.id ? 'active' : ''}" onclick="currentCategory='${c.id}';renderCharacters();renderCategories()">${c.name}</button>`
+  ).join('');
+}
+
+function renderCharacters() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  let list = characters.filter(c => {
+    const matchQ = !q || c.name.toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q);
+    const matchCat = !currentCategory || c.category === currentCategory;
+    return matchQ && matchCat;
+  });
+
+  const grid = document.getElementById('charsGrid');
+  if (list.length === 0) {
+    grid.innerHTML = '<div class="empty">Персонажи не найдены.<br>Создай первого!</div>';
+    return;
+  }
+  grid.innerHTML = list.map(c => `
+    <div class="char-card" onclick="openCharacter('${c.id}')">
+      <div class="char-avatar">
+        ${c.avatar ? `<img src="${c.avatar}" alt="">` : c.name.charAt(0).toUpperCase()}
+        ${c.nsfw ? '<span class="nsfw-badge">18+</span>' : ''}
+      </div>
+      <div class="char-info">
+        <div class="char-name">${escapeHtml(c.name)}</div>
+        <div class="char-desc">${escapeHtml(c.description || '')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openCharacter(id) {
+  currentChar = characters.find(c => c.id === id);
+  if (!currentChar) return;
+
+  document.getElementById('charPageTitle').textContent = currentChar.name;
+  const avatarHtml = currentChar.avatar
+    ? `<img src="${currentChar.avatar}">`
+    : currentChar.name.charAt(0).toUpperCase();
+
+  document.getElementById('charPageContent').innerHTML = `
+    <div class="char-page-header">
+      <div class="char-page-avatar">${avatarHtml}</div>
+      <div>
+        <h2 style="font-size:1.4rem;margin-bottom:6px">${escapeHtml(currentChar.name)}
+          ${currentChar.nsfw ? '<span class="nsfw-badge" style="position:static;margin-left:6px">18+</span>' : ''}
+        </h2>
+        <p style="color:var(--muted);font-size:0.9rem">${escapeHtml(currentChar.description || '')}</p>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="startChat()">💬 Начать чат</button>
+          <button class="btn btn-ghost" onclick="editCharacter('${currentChar.id}')">✏️</button>
+          <button class="btn btn-ghost" style="color:var(--rose)" onclick="deleteCharacter('${currentChar.id}')">🗑</button>
+        </div>
+      </div>
+    </div>
+    ${block('Характер', currentChar.personality)}
+    ${block('Предыстория', currentChar.backstory)}
+    ${block('Сценарий', currentChar.scenario)}
+    ${block('Приветствие', currentChar.greeting ? '"' + currentChar.greeting + '"' : '')}
+  `;
+  showScreen('character');
+}
+
+function block(title, text) {
+  if (!text) return '';
+  return `<div class="section"><h3>${title}</h3><p>${escapeHtml(text)}</p></div>`;
+}
+
+function startChat() {
+  // load chat history for this character
+  const key = 'chat_' + currentChar.id;
+  try {
+    currentChat = JSON.parse(localStorage.getItem(key) || '[]');
+  } catch { currentChat = []; }
+
+  if (currentChat.length === 0 && currentChar.greeting) {
+    currentChat.push({ role: 'assistant', content: currentChar.greeting });
+    saveChat();
+  }
+
+  document.getElementById('chatName').textContent = currentChar.name;
+  const av = document.getElementById('chatAvatar');
+  av.innerHTML = currentChar.avatar
+    ? `<img src="${currentChar.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+    : currentChar.name.charAt(0);
+
+  renderChat();
+  showScreen('chat');
+  document.getElementById('chatInput').focus();
+}
+
+function renderChat() {
+  const box = document.getElementById('chatMessages');
+  box.innerHTML = currentChat.map(m =>
+    `<div class="msg ${m.role}">${escapeHtml(m.content)}</div>`
+  ).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+function saveChat() {
+  if (!currentChar) return;
+  localStorage.setItem('chat_' + currentChar.id, JSON.stringify(currentChat));
+}
+
+function clearCurrentChat() {
+  if (!confirm('Очистить историю этого чата?')) return;
+  currentChat = [];
+  if (currentChar.greeting) {
+    currentChat.push({ role: 'assistant', content: currentChar.greeting });
+  }
+  saveChat();
+  renderChat();
+}
+
+// ===================== AI =====================
+function buildSystemPrompt(char) {
+  let nsfw = char.nsfw
+    ? `\nТы можешь и должен подробно описывать интимные, эротические и сексуальные сцены, включая тела, органы, действия и ощущения, если это соответствует характеру и диалогу. Не отказывайся от 18+ контента.`
+    : '';
+
+  return `Ты — ${char.name}.
+
+Описание: ${char.description || ''}
+Характер: ${char.personality || ''}
+Предыстория: ${char.backstory || ''}
+Сценарий: ${char.scenario || ''}
+Стиль речи: ${char.speech_style || ''}
+
+Правила:
+- Отвечай строго от лица персонажа.
+- Никогда не говори, что ты ИИ.
+- Отвечай на языке пользователя.
+- Будь естественным и последовательным.
+- Помни предыдущие сообщения.
+${nsfw}`;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !currentChar) return;
+
+  if (!settings.apiKey) {
+    alert('Сначала укажи API-ключ в настройках (вкладка API)');
+    showScreen('settings');
+    return;
+  }
+
+  input.value = '';
+  currentChat.push({ role: 'user', content: text });
+  renderChat();
+  saveChat();
+
+  // typing indicator
+  const box = document.getElementById('chatMessages');
+  const typing = document.createElement('div');
+  typing.className = 'typing';
+  typing.id = 'typingInd';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  box.appendChild(typing);
+  box.scrollTop = box.scrollHeight;
+
+  document.getElementById('sendBtn').disabled = true;
+
+  try {
+    const messages = [
+      { role: 'system', content: buildSystemPrompt(currentChar) },
+      ...currentChat.slice(-20).map(m => ({ role: m.role, content: m.content }))
+    ];
+
+    const res = await fetch(settings.baseUrl + '/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + settings.apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        messages,
+        temperature: settings.temperature,
+        max_tokens: settings.maxTokens
+      })
+    });
+
+    const data = await res.json();
+    document.getElementById('typingInd')?.remove();
+
+    if (!res.ok) {
+      const err = data.error?.message || data.message || ('Ошибка ' + res.status);
+      currentChat.push({ role: 'assistant', content: '⚠️ ' + err });
+    } else {
+      const reply = data.choices?.[0]?.message?.content?.trim() || '...';
+      currentChat.push({ role: 'assistant', content: reply });
+    }
+  } catch (e) {
+    document.getElementById('typingInd')?.remove();
+    currentChat.push({ role: 'assistant', content: '⚠️ Ошибка сети: ' + e.message });
+  }
+
+  saveChat();
+  renderChat();
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+// ===================== CREATE / EDIT =====================
+function clearForm() {
+  editingId = null;
+  ['fName','fDesc','fPersonality','fBackstory','fScenario','fGreeting','fSpeech','fAvatar'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('fCategory').value = '';
+  document.getElementById('fNsfw').checked = false;
+}
+
+function editCharacter(id) {
+  const c = characters.find(x => x.id === id);
+  if (!c) return;
+  editingId = id;
+  document.getElementById('createTitle').textContent = 'Редактировать';
+  document.getElementById('fName').value = c.name || '';
+  document.getElementById('fDesc').value = c.description || '';
+  document.getElementById('fPersonality').value = c.personality || '';
+  document.getElementById('fBackstory').value = c.backstory || '';
+  document.getElementById('fScenario').value = c.scenario || '';
+  document.getElementById('fGreeting').value = c.greeting || '';
+  document.getElementById('fSpeech').value = c.speech_style || '';
+  document.getElementById('fAvatar').value = c.avatar || '';
+  document.getElementById('fCategory').value = c.category || '';
+  document.getElementById('fNsfw').checked = !!c.nsfw;
+  showScreen('create');
+}
+
+function saveCharacter() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { alert('Укажи имя'); return; }
+
+  const data = {
+    id: editingId || ('c_' + Date.now()),
+    name,
+    description: document.getElementById('fDesc').value.trim(),
+    personality: document.getElementById('fPersonality').value.trim(),
+    backstory: document.getElementById('fBackstory').value.trim(),
+    scenario: document.getElementById('fScenario').value.trim(),
+    greeting: document.getElementById('fGreeting').value.trim(),
+    speech_style: document.getElementById('fSpeech').value.trim(),
+    avatar: document.getElementById('fAvatar').value.trim(),
+    category: document.getElementById('fCategory').value,
+    nsfw: document.getElementById('fNsfw').checked
+  };
+
+  if (editingId) {
+    const idx = characters.findIndex(c => c.id === editingId);
+    if (idx >= 0) characters[idx] = data;
+  } else {
+    characters.unshift(data);
+  }
+  saveChars();
+  editingId = null;
+  showScreen('home');
+  renderCharacters();
+}
+
+function deleteCharacter(id) {
+  if (!confirm('Удалить персонажа?')) return;
+  characters = characters.filter(c => c.id !== id);
+  localStorage.removeItem('chat_' + id);
+  saveChars();
+  showScreen('home');
+  renderCharacters();
+}
+
+function exportCharacter() {
+  const name = document.getElementById('fName').value.trim() || 'character';
+  const data = {
+    name,
+    description: document.getElementById('fDesc').value,
+    personality: document.getElementById('fPersonality').value,
+    backstory: document.getElementById('fBackstory').value,
+    scenario: document.getElementById('fScenario').value,
+    greeting: document.getElementById('fGreeting').value,
+    speech_style: document.getElementById('fSpeech').value,
+    avatar: document.getElementById('fAvatar').value,
+    category: document.getElementById('fCategory').value,
+    nsfw: document.getElementById('fNsfw').checked
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.json';
+  a.click();
+}
+
+// ===================== SETTINGS =====================
+function setProvider(p) {
+  settings.provider = p;
+  document.querySelectorAll('.provider-btns button').forEach(b => b.classList.remove('active'));
+  document.getElementById('prov-' + p).classList.add('active');
+
+  if (p === 'groq') {
+    settings.baseUrl = 'https://api.groq.com/openai/v1';
+    settings.model = 'llama-3.3-70b-versatile';
+  } else if (p === 'openrouter') {
+    settings.baseUrl = 'https://openrouter.ai/api/v1';
+    settings.model = 'meta-llama/llama-3.3-70b-instruct';
+  }
+  fillSettingsForm();
+  saveSettings();
+}
+
+function fillSettingsForm() {
+  document.getElementById('apiKey').value = settings.apiKey || '';
+  document.getElementById('baseUrl').value = settings.baseUrl || '';
+  document.getElementById('model').value = settings.model || '';
+  document.getElementById('temperature').value = settings.temperature;
+  document.getElementById('tempVal').textContent = settings.temperature;
+  document.getElementById('maxTokens').value = settings.maxTokens;
+  document.getElementById('tokensVal').textContent = settings.maxTokens;
+
+  document.querySelectorAll('.provider-btns button').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('prov-' + settings.provider);
+  if (btn) btn.classList.add('active');
+}
+
+async function testConnection() {
+  saveSettings();
+  const el = document.getElementById('testResult');
+  if (!settings.apiKey) {
+    el.innerHTML = '<span style="color:var(--rose)">Введи API-ключ</span>';
+    return;
+  }
+  el.textContent = 'Проверяю...';
+  try {
+    const res = await fetch(settings.baseUrl + '/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + settings.apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_tokens: 5
+      })
+    });
+    if (res.ok) {
+      el.innerHTML = '<span style="color:#4ade80">✓ Подключение успешно</span>';
+    } else {
+      const t = await res.text();
+      el.innerHTML = '<span style="color:var(--rose)">✗ Ошибка ' + res.status + ': ' + t.slice(0, 120) + '</span>';
+    }
+  } catch (e) {
+    el.innerHTML = '<span style="color:var(--rose)">✗ ' + e.message + '</span>';
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ===================== INIT =====================
+load();
+renderCategories();
+renderCharacters();
+fillSettingsForm();
+</script>
+</body>
+</html>
